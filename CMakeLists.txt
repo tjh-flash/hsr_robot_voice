@@ -36,6 +36,7 @@ find_package(catkin REQUIRED)
 ##   * add "message_generation" and every package in MSG_DEP_SET to
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rb_msgAndSrv
 )
 ##   * add "message_runtime" and every package in MSG_DEP_SET to
 ##     catkin_package(CATKIN_DEPENDS ...)

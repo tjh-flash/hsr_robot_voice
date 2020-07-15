@@ -19,7 +19,7 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
-//#include <rb_msgAndSrv/rb_DoubleBool.h>
+#include <rb_msgAndSrv/rb_string.h>
 
 //语音指令发布者
 ros::Publisher order_pub;
@@ -173,7 +173,7 @@ void voiceWordsCallback(const std_msgs::String::ConstPtr& msg)
 	//语音内容判断
     if(dataString.compare("你是谁") == 0)
     {
-        char nameString[100] = "我是华数智能机器人001，很开心为你服务";
+        char nameString[100] = "我是华数智能机器人小红，很开心为你服务";
         text = nameString;
         std::cout << text << std::endl;
     }
@@ -218,7 +218,7 @@ void voiceWordsCallback(const std_msgs::String::ConstPtr& msg)
 		voice_order.data = 2;
 		order_pub.publish(voice_order);
 		
-        char helloString[50] = "你好，很荣幸认识你";
+        char helloString[50] = "Hello，很荣幸认识你";
         text = helloString;
         std::cout << text << std::endl;
     }
@@ -288,6 +288,40 @@ void voiceWordsCallback(const std_msgs::String::ConstPtr& msg)
     sleep(3);
 }
 
+//调用语音服务回调函数
+bool voice_service_Callback(rb_msgAndSrv::rb_string::Request &req, rb_msgAndSrv::rb_string::Response &res)
+{
+	 char cmd[2000];
+    const char* text;
+    int         ret                  = MSP_SUCCESS;
+    const char* session_begin_params = "voice_name = xiaoyan, text_encoding = utf8, sample_rate = 16000, speed = 50, volume = 50, pitch = 50, rdn = 2";
+    const char* filename             = "tts_sample.wav"; //合成的语音文件名称
+
+	std::cout << "I heard :" << req.data.data.c_str() <<std::endl;
+	text = req.data.data.c_str();
+
+	/* 文本合成 */
+    printf("开始合成 ...\n");
+    ret = text_to_speech(text, filename, session_begin_params);
+    if (MSP_SUCCESS != ret)
+    {
+        printf("text_to_speech failed, error code: %d.\n", ret);
+		res.finsh = false;
+    }
+	else{
+		res.finsh = true;
+	}
+    printf("合成完毕\n");
+
+    unlink("/tmp/cmd");  
+    mkfifo("/tmp/cmd", 0777);  
+    popen("mplayer -quiet -slave -input file=/tmp/cmd 'tts_sample.wav'","r");
+    sleep(3);
+
+	//res.voice_coming = true;
+	return true;
+}
+
 void toExit()
 {
     printf("按任意键退出 ...\n");
@@ -300,7 +334,7 @@ void toExit()
 int main(int argc, char* argv[])
 {
 	int         ret                  = MSP_SUCCESS;
-	const char* login_params         = "appid = 5f0535bb, work_dir = .";//登录参数,appid与msc库绑定,请勿随意改动
+	const char* login_params         = "appid = 5d706e05, work_dir = .";//登录参数,appid与msc库绑定,请勿随意改动
 	/*
 	* rdn:           合成音频数字发音方式
 	* volume:        合成音频的音量
@@ -325,6 +359,7 @@ int main(int argc, char* argv[])
     ros::init(argc,argv,"TextToSpeech");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("voiceSolve_res", 1000, voiceWordsCallback);
+	ros::ServiceServer voice_sever = n.advertiseService("get_voice", voice_service_Callback);
 	order_pub = n.advertise<std_msgs::Int16 >("voice_order", 100);
 
     ros::spin();
